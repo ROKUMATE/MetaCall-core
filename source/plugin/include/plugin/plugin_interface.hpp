@@ -56,10 +56,16 @@
 		} \
 	} while (0)
 
-#define EXTENSION_FUNCTION(ret, name, ...) \
-	PREPROCESSOR_IF(PREPROCESSOR_ARGS_EMPTY(__VA_ARGS__), \
-		EXTENSION_FUNCTION_IMPL_VOID(ret, name), \
-		EXTENSION_FUNCTION_IMPL(ret, name, __VA_ARGS__))
+#define EXTENSION_FUNCTION_0(ret, name) \
+	EXTENSION_FUNCTION_IMPL_VOID(ret, name)
+
+#define EXTENSION_FUNCTION_N(ret, name, ...) \
+	EXTENSION_FUNCTION_IMPL(ret, name, __VA_ARGS__)
+
+#define EXTENSION_FUNCTION_SELECT_(_1, _2, _3, _4, N_, ...) N_
+
+#define EXTENSION_FUNCTION(...) \
+	EXTENSION_FUNCTION_SELECT_(__VA_ARGS__, EXTENSION_FUNCTION_N, EXTENSION_FUNCTION_N, EXTENSION_FUNCTION_0, ~)(__VA_ARGS__)
 
 #define EXTENSION_FUNCTION_THROW(error) \
 	do \
@@ -78,15 +84,24 @@
 		EXTENSION_FUNCTION_THROW(error_msg.c_str()); \
 	}
 
-#define EXTENSION_FUNCTION_CHECK(error, ...) \
+#define EXTENSION_FUNCTION_CHECK_0(error) \
 	do \
 	{ \
 		(void)data; /* TODO: Do something with data */ \
-		/* Disable warning on args when no args */ \
-		PREPROCESSOR_IF(PREPROCESSOR_ARGS_EMPTY(__VA_ARGS__), \
-						(void)args; \
-						, \
-						PREPROCESSOR_EMPTY_SYMBOL()) \
+		(void)args; \
+		if (argc != 0) \
+		{ \
+			std::stringstream ss; \
+			ss << error ". The required number of argumens is 0, received: " << argc; \
+			std::string error_msg = ss.str(); \
+			EXTENSION_FUNCTION_THROW(error_msg.c_str()); \
+		} \
+	} while (0)
+
+#define EXTENSION_FUNCTION_CHECK_N(error, ...) \
+	do \
+	{ \
+		(void)data; /* TODO: Do something with data */ \
 		if (argc != PREPROCESSOR_ARGS_COUNT(__VA_ARGS__)) \
 		{ \
 			std::stringstream ss; \
@@ -96,5 +111,10 @@
 		} \
 		PREPROCESSOR_FOR(EXTENSION_FUNCTION_CHECK_ITERATOR, error, __VA_ARGS__) \
 	} while (0)
+
+#define EXTENSION_FUNCTION_CHECK_SELECT_(_1, _2, _3, N_, ...) N_
+
+#define EXTENSION_FUNCTION_CHECK(...) \
+	EXTENSION_FUNCTION_CHECK_SELECT_(__VA_ARGS__, EXTENSION_FUNCTION_CHECK_N, EXTENSION_FUNCTION_CHECK_N, EXTENSION_FUNCTION_CHECK_0, ~)(__VA_ARGS__)
 
 #endif /* PLUGIN_INTERFACE_HPP */
